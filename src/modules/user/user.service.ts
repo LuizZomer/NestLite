@@ -1,12 +1,20 @@
 import { Injectable } from "../../core/decorators";
+import { UserRepository } from "./user.repository";
 
 @Injectable()
 export class UserService {
+  constructor(private readonly userRepository: UserRepository) {}
+
   async findAll() {
-    return { user: { name: "User", age: 30 } };
+    return this.userRepository.findAll();
   }
 
   async create(body: { name: string; age: number }) {
-    return { user: body };
+    const id = Date.now().toString();
+    return this.userRepository.create({ id, ...body });
+  }
+
+  async findById(id: string) {
+    return this.userRepository.findById(id);
   }
 }

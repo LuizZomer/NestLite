@@ -1,11 +1,27 @@
 import express, { Express, Request, Response, Router } from "express";
 import { Container } from "./di-container";
+import {
+  BodyParamResolver,
+  IParamResolver,
+  QueryParamResolver,
+  RouteParamResolver,
+} from "./strategies/params";
 
 export class Factory {
+  private static readonly resolvers: IParamResolver[] = [
+    new BodyParamResolver(),
+    new RouteParamResolver(),
+    new QueryParamResolver(),
+  ];
+
   public static create(rootModule: Constructor): Express {
     const app = express();
     app.use(express.json());
     this.registerModule(rootModule, app);
+
+    app.use((_, res) => {
+      res.status(404).json({ error: "Route not found" });
+    });
 
     return app;
   }
@@ -86,13 +102,26 @@ export class Factory {
       router[routeMethod](routePath, async (req: Request, res: Response) => {
         try {
           const proto = Object.getPrototypeOf(controllerInstance);
-          const bodyParams: number[] =
-            Reflect.getMetadata("body_params", proto, methodName) || [];
-
           const args: any[] = [];
-          // injeta o req.body apenas nos parâmetros marcados
-          for (const index of bodyParams) {
-            args[index] = req.body;
+
+          for (let i = 0; i < method.length; i++) {
+            const paramMetadata = Reflect.getMetadata(
+              `param:${i}`,
+              proto,
+              methodName
+            );
+
+            if (paramMetadata) {
+              const resolver = this.resolvers.find((r) =>
+                r.supports(paramMetadata.type)
+              );
+
+              if (resolver) {
+                args[i] = resolver.resolve(proto, i, paramMetadata, req);
+              }
+            } else {
+              args[i] = undefined;
+            }
           }
 
           const result = await method.apply(controllerInstance, args);
