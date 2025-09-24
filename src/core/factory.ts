@@ -1,78 +1,71 @@
-import express, { Express, Request, Response } from "express";
+import express, { Express, Request, Response, Router } from "express";
 import { Container } from "./di-container";
 
-type HttpMethod = "get" | "post" | "put" | "delete" | "patch";
-
 export class Factory {
-  public static create(rootModule: any): Express {
+  public static create(rootModule: Constructor): Express {
     const app = express();
+    this.registerModule(rootModule, app);
+    return app;
+  }
 
-    function registerModule(moduleClass: any) {
-      const controllers = Reflect.getMetadata("controllers", moduleClass) || [];
-      const imports = Reflect.getMetadata("imports", moduleClass) || [];
+  private static registerModule(moduleClass: Constructor, app: Express) {
+    const controllers: Constructor[] =
+      Reflect.getMetadata("controllers", moduleClass) || [];
+    const imports: Constructor[] =
+      Reflect.getMetadata("imports", moduleClass) || [];
 
-      // processa controllers
-      for (const ControllerClass of controllers) {
-        const controllerInstance = new ControllerClass(
-          ...Reflect.getMetadata("design:paramtypes", ControllerClass).map(
-            (dep: any) => Container.get(dep)
-          )
-        );
-
-        const basePath: string =
-          Reflect.getMetadata("path", ControllerClass) || "";
-
-        const router = express.Router();
-        const proto = Object.getPrototypeOf(controllerInstance);
-
-        for (const methodName of Object.getOwnPropertyNames(proto)) {
-          if (methodName === "constructor") continue;
-          const method = proto[methodName];
-          if (typeof method === "function") {
-            const routePath: string = Reflect.getMetadata("path", method);
-            const routeMethod: HttpMethod = Reflect.getMetadata(
-              "method",
-              method
-            );
-
-            console.log(
-              `Registering route: ${basePath}${routePath} - ${routeMethod}`
-            );
-
-            if (routePath && routeMethod) {
-              router[routeMethod](
-                routePath,
-                async (req: Request, res: Response) => {
-                  try {
-                    const result = await method.call(
-                      controllerInstance,
-                      req,
-                      res
-                    );
-                    if (result !== undefined && !res.headersSent) {
-                      res.json(result);
-                    }
-                  } catch (err: any) {
-                    res
-                      .status(500)
-                      .json({ error: err.message || "Internal server error" });
-                  }
-                }
-              );
-            }
-          }
-        }
-
-        app.use(basePath, router);
-      }
-
-      for (const importedModule of imports) {
-        registerModule(importedModule);
-      }
+    // Registra módulos importados recursivamente
+    for (const importedModule of imports) {
+      this.registerModule(importedModule, app);
     }
 
-    registerModule(rootModule);
+    for (const ControllerClass of controllers) {
+      const controllerInstance = this.createController(ControllerClass);
 
-    return app;
+      const basePath: string =
+        Reflect.getMetadata("path", ControllerClass) || "";
+      const router = express.Router();
+
+      const proto = Object.getPrototypeOf(controllerInstance);
+      for (const methodName of Object.getOwnPropertyNames(proto)) {
+        if (methodName === "constructor") continue;
+
+        const method = proto[methodName] as Function;
+        const routePath: string | undefined = Reflect.getMetadata(
+          "path",
+          method
+        );
+        const routeMethod: keyof Router | undefined = Reflect.getMetadata(
+          "method",
+          method
+        );
+
+        if (routePath && routeMethod) {
+          // @ts-ignore
+          router[routeMethod](
+            routePath,
+            async (req: Request, res: Response) => {
+              try {
+                const result = await method.call(controllerInstance, req, res);
+                if (!res.headersSent && result !== undefined) res.json(result);
+              } catch (err: any) {
+                res
+                  .status(500)
+                  .json({ error: err.message || "Internal server error" });
+              }
+            }
+          );
+        }
+      }
+
+      app.use(basePath, router);
+    }
+  }
+
+  private static createController<T>(ControllerClass: Constructor<T>): T {
+    const paramTypes: Constructor[] =
+      Reflect.getMetadata("design:paramtypes", ControllerClass) || [];
+    const dependencies = paramTypes.map((dep) => Container.get(dep));
+    return new ControllerClass(...dependencies);
   }
 }
