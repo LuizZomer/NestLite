@@ -23,7 +23,7 @@ export class Factory {
     const controllers: Constructor[] =
       Reflect.getMetadata("controllers", moduleClass) || [];
     for (const ControllerClass of controllers) {
-      this.registerController(ControllerClass, app);
+      this.registerController(ControllerClass, app, moduleClass);
     }
   }
 
@@ -39,9 +39,13 @@ export class Factory {
   // === registra controllers e rotas ===
   private static registerController(
     ControllerClass: Constructor,
-    app: Express
+    app: Express,
+    moduleClass: Constructor
   ) {
-    const controllerInstance = this.createController(ControllerClass);
+    const controllerInstance = this.createController(
+      ControllerClass,
+      moduleClass
+    );
     const basePath: string = Reflect.getMetadata("path", ControllerClass) || "";
     const router: Router = express.Router();
 
@@ -85,10 +89,17 @@ export class Factory {
   }
 
   // === cria controller com injeção de dependências ===
-  private static createController<T>(ControllerClass: Constructor<T>): T {
+  private static createController<T>(
+    ControllerClass: Constructor<T>,
+    moduleClass: Constructor
+  ): T {
+    const providers: Constructor[] =
+      Reflect.getMetadata("providers", moduleClass) || [];
     const paramTypes: Constructor[] =
       Reflect.getMetadata("design:paramtypes", ControllerClass) || [];
-    const dependencies = paramTypes.map((dep) => Container.get(dep));
+
+    const dependencies = paramTypes.map((dep) => Container.get(dep, providers));
+
     return new ControllerClass(...dependencies);
   }
 }
