@@ -49,15 +49,18 @@ class UserModule {}
 - Armazena metadados `controllers`, `providers` e `imports`.
 - Permite modularidade e composição de módulos.
 
-## 4. `@Get(path: string)`
+## 4. `Decorator de método para definir rotas HTTP GET.`
 
-Decorator de método para definir rotas HTTP GET.
+Decoradores de rota (@Get, @Post, @Put, @Delete) funcionam da mesma forma:
+
+- Cada decorador salva `path` e `method` (GET, POST, PUT, DELETE) no metadado do método.
+- O Factory itera sobre os métodos do controller e registra as rotas no Express.
+- Dessa forma, você pode adicionar novos métodos HTTP de forma consistente,
+  sem precisar mudar a lógica do Factory.
+
+Exemplo:
 
 ```ts
 @Get("/")
 async findAll() {}
 ```
-
-- Salva `path` e `method = "get"` no metadado do método.
-- O Factory itera sobre os métodos do controller para registrar rotas no Express.
-- Futuro: você pode adicionar `@Post`, `@Put`, `@Delete` de forma similar.
