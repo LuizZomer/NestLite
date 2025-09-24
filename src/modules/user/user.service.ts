@@ -5,4 +5,8 @@ export class UserService {
   async findAll() {
     return { user: { name: "User", age: 30 } };
   }
+
+  async create(body: { name: string; age: number }) {
+    return { user: body };
+  }
 }

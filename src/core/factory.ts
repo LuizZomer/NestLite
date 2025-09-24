@@ -4,7 +4,9 @@ import { Container } from "./di-container";
 export class Factory {
   public static create(rootModule: Constructor): Express {
     const app = express();
+    app.use(express.json());
     this.registerModule(rootModule, app);
+
     return app;
   }
 
@@ -55,7 +57,12 @@ export class Factory {
     );
 
     for (const methodName of methodNames) {
-      this.registerRoute(controllerInstance, proto[methodName], router);
+      this.registerRoute(
+        controllerInstance,
+        controllerInstance[methodName],
+        methodName,
+        router
+      );
     }
 
     app.use(basePath, router);
@@ -64,7 +71,8 @@ export class Factory {
   // === registra rotas individuais ===
   private static registerRoute(
     controllerInstance: any,
-    method: (...args: any[]) => Promise<any> | any,
+    method: Function,
+    methodName: string,
     router: Router
   ) {
     const routePath: string | undefined = Reflect.getMetadata("path", method);
@@ -77,8 +85,21 @@ export class Factory {
       // @ts-ignore
       router[routeMethod](routePath, async (req: Request, res: Response) => {
         try {
-          const result = await method.call(controllerInstance, req, res);
-          if (!res.headersSent && result !== undefined) res.json(result);
+          const proto = Object.getPrototypeOf(controllerInstance);
+          const bodyParams: number[] =
+            Reflect.getMetadata("body_params", proto, methodName) || [];
+
+          const args: any[] = [];
+          // injeta o req.body apenas nos parâmetros marcados
+          for (const index of bodyParams) {
+            args[index] = req.body;
+          }
+
+          const result = await method.apply(controllerInstance, args);
+
+          if (!res.headersSent && result !== undefined) {
+            res.json(result);
+          }
         } catch (err: any) {
           res
             .status(500)
