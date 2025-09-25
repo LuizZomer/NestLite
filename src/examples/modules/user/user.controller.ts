@@ -3,12 +3,14 @@ import {
   Body,
   Controller,
   Get,
+  HttpCode,
   Param,
   Post,
   Query,
   Req,
 } from "../../../core/decorators";
 import { UserService } from "./user.service";
+import { HttpStatus } from "../../../core/enum/http-status.enum";
 
 @Controller("/user")
 export class UserController {
@@ -31,6 +33,7 @@ export class UserController {
 
   // Para mostrar como funciona o Body e a rota aninhada
   @Post()
+  @HttpCode(HttpStatus.CREATED)
   async create(@Body() body: { name: string; age: number }) {
     return this.userService.create(body);
   }

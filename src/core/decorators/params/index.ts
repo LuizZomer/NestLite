@@ -62,3 +62,17 @@ export const Res = (): ParameterDecorator => {
     );
   };
 };
+
+type HttpStatus = number;
+
+export const HttpCode = (status: HttpStatus): MethodDecorator => {
+  return (
+    _target: Object,
+    _propertyKey: string | symbol,
+    descriptor: PropertyDescriptor
+  ) => {
+    if (descriptor && descriptor.value) {
+      Reflect.defineMetadata("httpStatus", status, descriptor.value);
+    }
+  };
+};

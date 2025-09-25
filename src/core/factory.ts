@@ -147,10 +147,15 @@ export class Factory {
             }
           }
 
+          const statusCode: number | undefined = Reflect.getMetadata(
+            "httpStatus",
+            method
+          );
+
           const result = await method.apply(controllerInstance, args);
 
           if (!res.headersSent && result !== undefined) {
-            res.json(result);
+            res.status(statusCode || 200).json(result);
           }
         } catch (err: any) {
           res
