@@ -5,7 +5,7 @@ import {
   Param,
   Post,
   Query,
-} from "../../core/decorators";
+} from "../../../core/decorators";
 import { UserService } from "./user.service";
 
 @Controller("/user")

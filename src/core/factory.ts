@@ -1,11 +1,14 @@
 import express, { Express, Request, Response, Router } from "express";
 import { Container } from "./di-container";
+import { MiddlewareConsumer } from "./middlewares/consumer";
+import { NestLiteMiddleware } from "./middlewares/types";
 import {
   BodyParamResolver,
   IParamResolver,
   QueryParamResolver,
   RouteParamResolver,
 } from "./strategies/params";
+import { Constructor } from "./types";
 
 export class Factory {
   private static readonly resolvers: IParamResolver[] = [
@@ -30,14 +33,30 @@ export class Factory {
   private static registerModule(moduleClass: Constructor, app: Express) {
     this.ensureIsModule(moduleClass);
 
-    // registra módulos importados primeiro
+    const moduleInstance = new moduleClass();
+
+    if (typeof moduleInstance.configure === "function") {
+      const consumer = new MiddlewareConsumer();
+      moduleInstance.configure(consumer);
+
+      const { middlewares, routes } = consumer.getConfig();
+      middlewares.forEach((middleware: NestLiteMiddleware) => {
+        if (routes.length > 0) {
+          routes.forEach((route: string) =>
+            app.use(route, middleware.use.bind(middleware))
+          );
+        } else {
+          app.use(middleware.use.bind(middleware));
+        }
+      });
+    }
+
     const imports: Constructor[] =
       Reflect.getMetadata("imports", moduleClass) || [];
     for (const importedModule of imports) {
       this.registerModule(importedModule, app);
     }
 
-    // registra controllers do módulo
     const controllers: Constructor[] =
       Reflect.getMetadata("controllers", moduleClass) || [];
     for (const ControllerClass of controllers) {
