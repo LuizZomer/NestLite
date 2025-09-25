@@ -36,3 +36,29 @@ export const Param = (name: string): ParameterDecorator => {
     );
   };
 };
+
+export const Req = (): ParameterDecorator => {
+  return (target, propertyKey, parameterIndex) => {
+    if (!propertyKey) throw new Error("@Req cannot be used on constructors");
+
+    Reflect.defineMetadata(
+      `param:${parameterIndex}`,
+      { type: "req" },
+      target,
+      propertyKey
+    );
+  };
+};
+
+export const Res = (): ParameterDecorator => {
+  return (target, propertyKey, parameterIndex) => {
+    if (!propertyKey) throw new Error("@Res cannot be used on constructors");
+
+    Reflect.defineMetadata(
+      `param:${parameterIndex}`,
+      { type: "res" },
+      target,
+      propertyKey
+    );
+  };
+};

@@ -6,6 +6,8 @@ import {
   BodyParamResolver,
   IParamResolver,
   QueryParamResolver,
+  RequestResolver,
+  ResponseResolver,
   RouteParamResolver,
 } from "./strategies/params";
 import { Constructor } from "./types";
@@ -15,6 +17,8 @@ export class Factory {
     new BodyParamResolver(),
     new RouteParamResolver(),
     new QueryParamResolver(),
+    new ResponseResolver(),
+    new RequestResolver(),
   ];
 
   public static create(rootModule: Constructor): Express {

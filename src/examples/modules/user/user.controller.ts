@@ -1,3 +1,4 @@
+import { Request } from "express";
 import {
   Body,
   Controller,
@@ -5,6 +6,7 @@ import {
   Param,
   Post,
   Query,
+  Req,
 } from "../../../core/decorators";
 import { UserService } from "./user.service";
 
@@ -13,8 +15,12 @@ export class UserController {
   constructor(private readonly userService: UserService) {}
 
   @Get()
-  async findAll(@Query("page") page: string) {
+  async findAll(
+    @Query("page") page: string,
+    @Req() req: Request & { middleware: string }
+  ) {
     console.log(page);
+    console.log("middleware", req.middleware);
     return this.userService.findAll();
   }
 

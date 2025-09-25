@@ -44,3 +44,33 @@ export class QueryParamResolver implements IParamResolver {
     return req.query[metadata.name];
   }
 }
+
+export class ResponseResolver implements IParamResolver {
+  supports(paramType: string): boolean {
+    return paramType === "res";
+  }
+
+  resolve(
+    _: any,
+    index: number,
+    metadata: { name: string },
+    req: Request
+  ): any {
+    return req.res;
+  }
+}
+
+export class RequestResolver implements IParamResolver {
+  supports(paramType: string): boolean {
+    return paramType === "req";
+  }
+
+  resolve(
+    _: any,
+    index: number,
+    metadata: { name: string },
+    req: Request
+  ): any {
+    return req;
+  }
+}
